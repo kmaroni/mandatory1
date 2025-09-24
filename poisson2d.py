@@ -1,7 +1,8 @@
 import numpy as np
 import sympy as sp
 import scipy.sparse as sparse
-from scipy.interplolate import interpn #for eval in Poisson2D
+from scipy.interpolate import interpn #for eval in Poisson2D
+from math import ceil
 
 x, y = sp.symbols('x,y')
 
@@ -33,8 +34,8 @@ class Poisson2D:
 
     def create_mesh(self, N):
         """Create 2D mesh and store in self.xij and self.yij"""
-        x = np.linspace(0,self.L,N)
-        self.xij, self.yij = np.meshgrid(x,x)
+        x = np.linspace(0,self.L,N+1)
+        self.xij, self.yij = np.meshgrid(x,x,indexing='ij')
 
     def D2(self):
         """Return second order differentiation matrix"""
@@ -67,13 +68,14 @@ class Poisson2D:
             A[i] = 0
             A[i, i] = 1
         A = A.tocsr()
-        b[bnds] = 0
+        b[bnds] = sp.lambdify((x,y),self.ue)(self.xij, self.yij).ravel()[bnds]
 
         return A, b
 
     def l2_error(self, u):
         """Return l2-error norm"""
-        return np.sqrt(self.h**2*np.sum((u)**2))
+        ue = sp.lambdify((x,y),self.ue)(self.xij, self.yij)
+        return np.sqrt(self.h**2*np.sum((u-ue)**2))
 
     def __call__(self, N):
         """Solve Poisson's equation.
@@ -134,9 +136,11 @@ class Poisson2D:
         The value of u(x, y)
 
         """
-        #use scipy.interpolate
-        idx = np.round(np.linspace(0, self.N, 3)).astype(int) #three evenly spaced points from mesh. Taken from: https://stackoverflow.com/a/50685454
-        return interpn((self.xij[idx], self.yij[0,idx], self.U[idx], np.array([x, y]), method='cubic')
+        #use cubic splines with scipy.interpolate
+        #Assume self.N > 4
+        idx = np.minimum(self.N-1,np.maximum(2,ceil(x/self.h))) #max i s.t. x≤x_i, readjust if x near boundary.
+        idy = np.minimum(self.N-1,np.maximum(2,ceil(y/self.h))) #max j s.t. y≤y_j, readjust if y near boundary.
+        return interpn((self.xij[idx-2:idx+2,0], self.yij[0,idy-2:idy+2]), self.U[idx-2:idx+2,idy-2:idy+2], np.array([x, y]), method='cubic')
 
 def test_convergence_poisson2d():
     # This exact solution is NOT zero on the entire boundary
