@@ -1,6 +1,7 @@
 import numpy as np
 import sympy as sp
 import scipy.sparse as sparse
+from scipy.interplolate import interpn #for eval in Poisson2D
 
 x, y = sp.symbols('x,y')
 
@@ -133,7 +134,9 @@ class Poisson2D:
         The value of u(x, y)
 
         """
-        raise NotImplementedError
+        #use scipy.interpolate
+        idx = np.round(np.linspace(0, self.N, 3)).astype(int) #three evenly spaced points from mesh. Taken from: https://stackoverflow.com/a/50685454
+        return interpn((self.xij[idx], self.yij[0,idx], self.U[idx], np.array([x, y]), method='cubic')
 
 def test_convergence_poisson2d():
     # This exact solution is NOT zero on the entire boundary
