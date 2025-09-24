@@ -72,7 +72,7 @@ class Poisson2D:
 
     def l2_error(self, u):
         """Return l2-error norm"""
-        raise NotImplementedError
+        return np.sqrt(self.h**2*np.sum((u)**2))
 
     def __call__(self, N):
         """Solve Poisson's equation.
