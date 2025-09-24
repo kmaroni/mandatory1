@@ -40,8 +40,9 @@ class Wave2D:
         mx, my : int
             Parameters for the standing wave
         """
-        Unm1 = sp.lambdify((x,y,t),self.ue(mx,my))(self.xij,self.yij,0)
-        Un = Unm1 + 0.5*(self.c*self.dt)**2*(self.D @ Unm1 + Unm1 @ self.D.T)
+        Un, Unm1 = np.zeros((2,N+1,N+1))
+        Unm1[:] = sp.lambdify((x,y,t),self.ue(mx,my))(self.xij,self.yij,0)
+        Un[:] = Unm1 + 0.5*(self.c*self.dt)**2*(self.D @ Unm1 + Unm1 @ self.D.T)
         return Un, Unm1
 
     @property
@@ -103,6 +104,7 @@ class Wave2D:
         Un, Unm1 = self.initialize(N, mx, my)
         Unp1 = np.zeros((N+1,N+1))
         data = {0: Unm1.copy()}
+        err = []
         for n in range(1,Nt):
             Unp1[:] = 2*Un - Unm1 + (self.c*self.dt)**2*(self.D @ Un + Un @ self.D.T)
             Unp1[:] = self.apply_bcs(Unp1,n*self.dt)
@@ -114,8 +116,8 @@ class Wave2D:
         if store_data > 0:
             return data
         elif store_data == -1:
-            l2_err = self.l2_error(Un,Nt*self.dt)
-            return self.h, l2_err
+            err.append(self.l2_error(Un,Nt*self.dt))
+            return self.h, err
 
     def convergence_rates(self, m=4, cfl=0.1, Nt=10, mx=3, my=3):
         """Compute convergence rates for a range of discretizations
@@ -143,7 +145,7 @@ class Wave2D:
         N0 = 8
         for m in range(m):
             dx, err = self(N0, Nt, cfl=cfl, mx=mx, my=my, store_data=-1)
-            E.append(err)
+            E.append(err[-1])
             h.append(dx)
             N0 *= 2
             Nt *= 2
@@ -153,13 +155,16 @@ class Wave2D:
 class Wave2D_Neumann(Wave2D):
 
     def D2(self, N):
-        raise NotImplementedError
+        D = sparse.diags([1, -2, 1], [-1, 0, 1], (N+1, N+1), 'lil')
+        D[0, :4] = -2, 2, 0, 0
+        D[-1, -4:] = 0, 0, 2, -2
+        return D
 
     def ue(self, mx, my):
-        raise NotImplementedError
+        return sp.cos(mx*sp.pi*x)*sp.cos(my*sp.pi*y)*sp.cos(self.w*t)
 
-    def apply_bcs(self):
-        raise NotImplementedError
+    def apply_bcs(self,U,t0):
+        return U
 
 def test_convergence_wave2d():
     sol = Wave2D()
