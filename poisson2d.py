@@ -32,8 +32,8 @@ class Poisson2D:
 
     def create_mesh(self, N):
         """Create 2D mesh and store in self.xij and self.yij"""
-        # self.xij, self.yij ...
-        raise NotImplementedError
+        x = np.linspace(0,self.L,N)
+        self.xij, self.yij = np.meshgrid(x,x)
 
     def D2(self):
         """Return second order differentiation matrix"""
@@ -128,4 +128,3 @@ def test_interpolation():
     U = sol(100)
     assert abs(sol.eval(0.52, 0.63) - ue.subs({x: 0.52, y: 0.63}).n()) < 1e-3
     assert abs(sol.eval(sol.h/2, 1-sol.h/2) - ue.subs({x: sol.h/2, y: 1-sol.h/2}).n()) < 1e-3
-
