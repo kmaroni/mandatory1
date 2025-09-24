@@ -39,12 +39,15 @@ class Wave2D:
         mx, my : int
             Parameters for the standing wave
         """
-        raise NotImplementedError
+        Un, Unm1 = np.zeros((2, N+1, N+1))
+        Unm1[:] = sp.lambdify((x,y),self.ue(mx,my))(self.xij,self.yij)
+        Un[:] = Unm1[:] + 0.5*(self.c*self.dt)**2*(self.D @ Un + Un @ self.D.T)
+        return Un, Unm1
 
     @property
     def dt(self):
         """Return the time step"""
-        raise NotImplementedError
+        return self.cfl*self.h/self.c
 
     def l2_error(self, u, t0):
         """Return l2-error norm
@@ -58,8 +61,12 @@ class Wave2D:
         """
         raise NotImplementedError
 
-    def apply_bcs(self):
-        raise NotImplementedError
+    def apply_bcs(self,U):
+        B = np.ones(U.shape())
+        B[1:-1,1:-1] = 0
+        bnds = np.where(B == 1)[0]
+        U[bnds] = 0
+        return U
 
     def __call__(self, N, Nt, cfl=0.5, c=1.0, mx=3, my=3, store_data=-1):
         """Solve the wave equation
@@ -86,6 +93,21 @@ class Wave2D:
         If store_data > 0, then return a dictionary with key, value = timestep, solution
         If store_data == -1, then return the two-tuple (h, l2-error)
         """
+        self.create_mesh(N)
+        self.c = c
+        self.cfl = cfl
+        self.h = 1/N
+        self.D = D2(N)/h**2
+        Un, Unm1 = self.initialize(N, mx, my)
+        Unp1 = np.zeros((N+1,N+1))
+        data = {0: Unm1.copy()}
+        for n in range(1,Nt):
+            Unp1[:] = 2*Un - Unm1 + (c*dt)**2*(self.D @ Un + Un @ self.D.T)
+            Unp1[:] = self.apply_bcs(Unp1)
+            Unm1[:] = Un
+            Un[:] = Unp1
+            if store_data > 0 and n%store_data == 0:
+                data[n] = Un.copy()
         raise NotImplementedError
 
     def convergence_rates(self, m=4, cfl=0.1, Nt=10, mx=3, my=3):
