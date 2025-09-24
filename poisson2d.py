@@ -58,8 +58,17 @@ class Poisson2D:
 
     def assemble(self):
         """Return assembled matrix A and right hand side vector b"""
-        # return A, b
-        raise NotImplementedError
+        A = self.laplace()
+        b = sp.lambdify((x,y), self.f)(self.xij, self.yij).ravel()
+        bnds = self.get_boundary_indices()
+        A = A.tolil()
+        for i in bnds:
+            A[i] = 0
+            A[i, i] = 1
+        A = A.tocsr()
+        b[bnds] = 0
+
+        return A, b
 
     def l2_error(self, u):
         """Return l2-error norm"""
