@@ -37,11 +37,17 @@ class Poisson2D:
 
     def D2(self):
         """Return second order differentiation matrix"""
-        raise NotImplementedError
+        D = sparse.diags([1,-2,1], [-1,0,1],(self.N+1, self.N+1), 'lil')
+        D[0, :4] = 2, -5, 4, -1
+        D[-1, -4:] = -1, 4, -5, 2
+        D /= self.h**2
+        return D
 
     def laplace(self):
         """Return vectorized Laplace operator"""
-        raise NotImplementedError
+        D2 = self.D2()
+        return (sparse.kron(D2, sparse.eye(self.N+1)) +
+                sparse.kron(sparse.eye(self.N+1), D2))
 
     def get_boundary_indices(self):
         """Return indices of vectorized matrix that belongs to the boundary"""
@@ -69,6 +75,8 @@ class Poisson2D:
         The solution as a Numpy array
 
         """
+        self.N = N
+        self.h = self.L/N
         self.create_mesh(N)
         A, b = self.assemble()
         self.U = sparse.linalg.spsolve(A, b.flatten()).reshape((N+1, N+1))
