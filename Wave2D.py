@@ -64,7 +64,7 @@ class Wave2D:
         return np.sqrt(self.h**2*np.sum((u-ue)**2))
 
     def apply_bcs(self,U):
-        """Return Unp1 with applied B.C.
+        """Return Unp1 with applied Dirichlet B.C.
 
         Parameters
         ----------
@@ -161,7 +161,7 @@ class Wave2D_Neumann(Wave2D):
     def D2(self, N):
         """Return modified second order differentiation matrix for Neumann B.C."""
         D = sparse.diags([1, -2, 1], [-1, 0, 1], (N+1, N+1), 'lil')
-        D[0, :4] = -2, 2, 0, 0
+        D[0, :4] = -2, 2, 0, 0 #Bake in BC in D
         D[-1, -4:] = 0, 0, 2, -2
         return D
 
