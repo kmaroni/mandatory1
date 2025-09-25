@@ -159,12 +159,14 @@ class Wave2D:
 class Wave2D_Neumann(Wave2D):
 
     def D2(self, N):
+        """Return modified second order differentiation matrix for Neumann B.C."""
         D = sparse.diags([1, -2, 1], [-1, 0, 1], (N+1, N+1), 'lil')
         D[0, :4] = -2, 2, 0, 0
         D[-1, -4:] = 0, 0, 2, -2
         return D
 
     def ue(self, mx, my):
+        """Return the exact standing wave for Neumann problem"""
         return sp.cos(mx*sp.pi*x)*sp.cos(my*sp.pi*y)*sp.cos(self.w*t)
 
     def apply_bcs(self,U):
@@ -173,7 +175,7 @@ class Wave2D_Neumann(Wave2D):
         Parameters
         ----------
         U : array
-            Solution of FDM without B.C.
+            Solution of FDM with modified D2.
         """
         return U
 
@@ -195,11 +197,11 @@ def test_exact_wave2d():
     try:
         assert err[-1] < 1e-12
     except AssertionError:
-        print(f'Error of Dirichlet is {err[-1]}>1e-12!')
+        print(f'Error of Dirichlet is {err[-1]}>1e-12.')
 
     solN = Wave2D_Neumann()
     h, err = solN(100, 50, cfl=cfl, mx=mx, my=my, store_data=-1)
     try:
         assert err[-1] < 1e-12
     except AssertionError:
-        print(f'Error of Neumann is {err[-1]}>1e-12!')
+        print(f'Error of Neumann is {err[-1]}>1e-12.')
