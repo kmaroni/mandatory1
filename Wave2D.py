@@ -3,6 +3,7 @@ import sympy as sp
 import scipy.sparse as sparse
 import matplotlib.pyplot as plt
 from matplotlib import cm
+import matplotlib.animation as animation
 
 x, y, t = sp.symbols('x,y,t')
 
@@ -205,3 +206,19 @@ def test_exact_wave2d():
         assert err[-1] < 1e-12
     except AssertionError:
         print(f'Error of Neumann is {err[-1]}>1e-12.')
+
+if __name__ == '__main__':
+    mx = 2; my = mx
+    cfl = 1/np.sqrt(2)
+    sol = Wave2D_Neumann()
+    data = sol(40, 40, cfl=cfl, mx=mx, my=my, store_data=3) #Nt must be multiple of N for the animation to loop perfectly
+    xij, yij = sol.xij, sol.yij
+    fig, ax = plt.subplots(subplot_kw={"projection": "3d"},dpi=90) #reduce quality s.t. file is small enough
+    frames = []
+    for n, val in data.items():
+        frame = ax.plot_wireframe(xij, yij, val, rstride=2, cstride=2);
+        frames.append([frame])
+
+    ani = animation.ArtistAnimation(fig, frames, interval=400, blit=True,
+                                repeat_delay=1000)
+    ani.save('report/wavemovie2dunstable.gif', writer='pillow', fps=10)
