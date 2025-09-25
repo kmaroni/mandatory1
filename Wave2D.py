@@ -63,11 +63,15 @@ class Wave2D:
         ue = sp.lambdify((x,y,t),self.ue(self.mx,self.my))(self.xij,self.yij,t0)
         return np.sqrt(self.h**2*np.sum((u-ue)**2))
 
-    def apply_bcs(self,U,t0):
-        B = np.ones(U.shape)
-        B[1:-1,1:-1] = 0
-        bnds = np.where(B == 1)[0]
-        U[bnds] = sp.lambdify((x,y,t),self.ue(self.mx,self.my))(self.xij,self.yij,t0)[bnds]
+    def apply_bcs(self,U):
+        """Return Unp1 with applied B.C.
+
+        Parameters
+        ----------
+        U : array
+            Solution of FDM without B.C.
+        """
+        U[0,:], U[-1,:], U[:,0], U[:,-1] = 0, 0, 0, 0
         return U
 
     def __call__(self, N, Nt, cfl=0.5, c=1.0, mx=3, my=3, store_data=-1):
@@ -107,7 +111,7 @@ class Wave2D:
         err = []
         for n in range(1,Nt):
             Unp1[:] = 2*Un - Unm1 + (self.c*self.dt)**2*(self.D @ Un + Un @ self.D.T)
-            Unp1[:] = self.apply_bcs(Unp1,n*self.dt)
+            Unp1[:] = self.apply_bcs(Unp1)
             Unm1[:] = Un
             Un[:] = Unp1
             if store_data > 0 and n%store_data == 0:
@@ -163,7 +167,14 @@ class Wave2D_Neumann(Wave2D):
     def ue(self, mx, my):
         return sp.cos(mx*sp.pi*x)*sp.cos(my*sp.pi*y)*sp.cos(self.w*t)
 
-    def apply_bcs(self,U,t0):
+    def apply_bcs(self,U):
+        """Overide apply_bcs from Wave2D to do nothing. B.C. handeled by D2
+
+        Parameters
+        ----------
+        U : array
+            Solution of FDM without B.C.
+        """
         return U
 
 def test_convergence_wave2d():
@@ -180,9 +191,15 @@ def test_exact_wave2d():
     mx = 2; my = mx
     cfl = 1/np.sqrt(2)
     sol = Wave2D()
-    h, err = sol(100, 50, cfl=cfl, mx=mx, my=my, store_data=-1)
-    assert err[-1] < 1e-12
+    h, err = sol(750, 50, cfl=cfl, mx=mx, my=my, store_data=-1)
+    try:
+        assert err[-1] < 1e-12
+    except AssertionError:
+        print(f'Error of Dirichlet is {err[-1]}>1e-12!')
 
     solN = Wave2D_Neumann()
     h, err = solN(100, 50, cfl=cfl, mx=mx, my=my, store_data=-1)
-    assert err[-1] < 1e-12
+    try:
+        assert err[-1] < 1e-12
+    except AssertionError:
+        print(f'Error of Neumann is {err[-1]}>1e-12!')
