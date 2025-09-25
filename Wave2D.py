@@ -216,9 +216,10 @@ if __name__ == '__main__':
     fig, ax = plt.subplots(subplot_kw={"projection": "3d"},dpi=90) #reduce quality s.t. file is small enough
     frames = []
     for n, val in data.items():
-        frame = ax.plot_wireframe(xij, yij, val, rstride=2, cstride=2);
+        frame = ax.plot_wireframe(xij, yij, val, rstride=2, cstride=2)
+        ax.set_title('Neumann wave')
         frames.append([frame])
 
     ani = animation.ArtistAnimation(fig, frames, interval=400, blit=True,
                                 repeat_delay=1000)
-    ani.save('report/wavemovie2dunstable.gif', writer='pillow', fps=10)
+    ani.save('report/neumannwave.gif', writer='pillow', fps=10)
